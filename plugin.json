@@ -1,0 +1,22 @@
+{
+  "id": "claude-hook",
+  "name": "Agent State",
+  "icon": "radio-tower",
+  "version": "0.2.0",
+  "entry": "main.js",
+  "runtime": "deno",
+  "apiVersion": { "major": 1, "minor": 0 },
+  "shortcut": { "key": "H", "mod": "ctrl+shift" },
+  "overlay": {
+    "mode": "floating",
+    "width": "50%",
+    "height": "40%",
+    "z_order": 50,
+    "minimizable": true,
+    "maximizable": false,
+    "resizable": true,
+    "bordered": true,
+    "minimized_label": "Agent",
+    "minimized_label_color": "#FFB86C"
+  }
+}
