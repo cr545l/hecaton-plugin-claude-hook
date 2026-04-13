@@ -1,6 +1,6 @@
 {
   "id": "claude-hook",
-  "name": "Agent State",
+  "name": "Claude State",
   "icon": "radio-tower",
   "version": "0.2.0",
   "entry": "main.js",
@@ -16,7 +16,7 @@
     "maximizable": false,
     "resizable": true,
     "bordered": true,
-    "minimized_label": "Agent",
+    "minimized_label": "Claude",
     "minimized_label_color": "#FFB86C"
   }
 }
