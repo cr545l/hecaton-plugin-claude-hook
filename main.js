@@ -478,55 +478,36 @@ function rerender() {
 // ============================================================
 // Input handler
 // ============================================================
+hecaton.on('resize', (params) => {
+  termCols = params.cols || termCols;
+  termRows = params.rows || termRows;
+  rerender();
+});
+hecaton.on('ws_connect', (params) => {
+  connections.set(params.connection_id, params.path);
+  addLog(`Client connected: ${params.connection_id}`);
+});
+hecaton.on('ws_message', (params) => {
+  onWsMessage(params);
+});
+hecaton.on('ws_disconnect', (params) => {
+  connections.delete(params.connection_id);
+  addLog(`Client disconnected: ${params.connection_id}`);
+});
+hecaton.on('http_request', (params) => {
+  onHttpRequest(params);
+});
+hecaton.on('terminal_changed', (params) => {
+  onTerminalChanged(params);
+});
+hecaton.on('dialog_result', (params) => {
+  onDialogResult(params.buttonId);
+});
+hecaton.on('minimize', () => { rerender(); });
+hecaton.on('restore', () => { rerender(); });
+
 function handleInput(data) {
   const str = data.toString();
-
-  if (str.indexOf('__HECA_RPC__') !== -1) {
-    const segments = str.split('__HECA_RPC__');
-    for (const seg of segments) {
-      const trimmed = seg.trim();
-      if (!trimmed) continue;
-      try {
-        const json = JSON.parse(trimmed);
-
-        if (json.id != null && (json.result !== undefined || json.error)) {
-          continue;
-        }
-
-        if (json.method === 'resize' && json.params) {
-          termCols = json.params.cols || termCols;
-          termRows = json.params.rows || termRows;
-          rerender();
-        }
-        if (json.method === 'ws_connect' && json.params) {
-          connections.set(json.params.connection_id, json.params.path);
-          addLog(`Client connected: ${json.params.connection_id}`);
-        }
-        if (json.method === 'ws_message' && json.params) {
-          onWsMessage(json.params);
-        }
-        if (json.method === 'ws_disconnect' && json.params) {
-          connections.delete(json.params.connection_id);
-          addLog(`Client disconnected: ${json.params.connection_id}`);
-        }
-        if (json.method === 'http_request' && json.params) {
-          onHttpRequest(json.params);
-        }
-        if (json.method === 'terminal_changed' && json.params) {
-          onTerminalChanged(json.params);
-        }
-        if (json.method === 'dialog_result' && json.params) {
-          onDialogResult(json.params.buttonId);
-        }
-        if (json.method === 'minimize' || json.method === 'restore') {
-          rerender();
-        }
-      } catch (e) {
-        // Parse errors from split segments are normal
-      }
-    }
-    return;
-  }
 
   for (const ch of str) {
     switch (ch) {
