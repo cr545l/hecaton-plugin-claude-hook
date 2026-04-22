@@ -236,7 +236,7 @@ sm.onTransition = async (terminalId, from, to, info) => {
 
   if (to === null) {
     addLog(`[${agent}] T${terminalId} session ended`);
-    await hecaton.set_terminal_status({ terminal_id: terminalId, label: '', icon: '', color: '', detail: '' });
+    await hecaton.terminal.set_status({ terminal_id: terminalId, label: '', icon: '', color: '', detail: '' });
     return;
   }
 
@@ -247,10 +247,10 @@ sm.onTransition = async (terminalId, from, to, info) => {
 
   addLog(`[${agent}] T${terminalId} ${from || 'null'} → ${to} (${info.reason || '?'})`);
 
-  await hecaton.set_terminal_status({ terminal_id: terminalId, label, icon: 'radio-tower', color, detail });
+  await hecaton.terminal.set_status({ terminal_id: terminalId, label, icon: 'radio-tower', color, detail });
 
   if (from === 'running' && to === 'waiting') {
-    await hecaton.notify({ terminal_id: terminalId, title: 'Agent State', body: `${agent} T${terminalId} response complete` });
+    await hecaton.notify.send({ terminal_id: terminalId, title: 'Agent State', body: `${agent} T${terminalId} response complete` });
   }
 };
 
@@ -295,7 +295,7 @@ let lastCellVersion = 0;
 async function onTerminalChanged(params) {
   if (!patternEnabled) return;
   try {
-    const cells = await hecaton.get_terminal_cells({ since_version: 0 });
+    const cells = await hecaton.terminal.get_cells({ since_version: 0 });
     if (!cells || !cells.rows_data) return;
     if (cells.version === lastCellVersion) return;
     lastCellVersion = cells.version;
@@ -347,7 +347,7 @@ async function startServer() {
   if (serverRunning) return;
   addLog(`Starting agent state server on port ${PORT}...`);
 
-  const result = await hecaton.web_serve({ port: PORT, host: '127.0.0.1' });
+  const result = await hecaton.web.serve({ port: PORT, host: '127.0.0.1' });
   if (!result || !result.ok) {
     addLog(`Server failed: ${result?.error || 'unknown'}`);
     return;
@@ -357,7 +357,7 @@ async function startServer() {
   serverRunning = true;
   addLog(`Server running on ws://127.0.0.1:${result.port}`);
 
-  await hecaton.web_serve_set_http({
+  await hecaton.web.set_http({
     server_id: serverId,
     content_type: 'application/json',
     body: JSON.stringify({ status: 'ok', message: 'Agent State Hook Server' }),
@@ -369,7 +369,7 @@ async function startServer() {
 async function stopServer() {
   if (!serverRunning) return;
   if (serverId) {
-    await hecaton.web_serve_stop({ server_id: serverId });
+    await hecaton.web.stop({ server_id: serverId });
     serverId = null;
   }
   connections.clear();
@@ -386,7 +386,7 @@ async function startPatternMatching() {
   patternEnabled = true;
   addLog('Pattern matching enabled (1.5s interval)');
 
-  const result = await hecaton.subscribe_terminal({ interval_ms: 1500 });
+  const result = await hecaton.terminal.subscribe({ interval_ms: 1500 });
   if (result && result.subscription_id) {
     subscriptionId = result.subscription_id;
     addLog(`Subscribed: ${subscriptionId}`);
@@ -398,7 +398,7 @@ async function stopPatternMatching() {
   if (!patternEnabled) return;
   patternEnabled = false;
   if (subscriptionId) {
-    await hecaton.unsubscribe_terminal({ subscription_id: subscriptionId });
+    await hecaton.terminal.unsubscribe({ subscription_id: subscriptionId });
     subscriptionId = null;
   }
   addLog('Pattern matching disabled');
@@ -478,33 +478,33 @@ function rerender() {
 // ============================================================
 // Input handler
 // ============================================================
-hecaton.on('resize', (params) => {
+hecaton.on('window_resized', (params) => {
   termCols = params.cols || termCols;
   termRows = params.rows || termRows;
   rerender();
 });
-hecaton.on('ws_connect', (params) => {
+hecaton.on('ws_connected', (params) => {
   connections.set(params.connection_id, params.path);
   addLog(`Client connected: ${params.connection_id}`);
 });
-hecaton.on('ws_message', (params) => {
+hecaton.on('message_received', (params) => {
   onWsMessage(params);
 });
-hecaton.on('ws_disconnect', (params) => {
+hecaton.on('disconnected', (params) => {
   connections.delete(params.connection_id);
   addLog(`Client disconnected: ${params.connection_id}`);
 });
-hecaton.on('http_request', (params) => {
+hecaton.on('http_request_received', (params) => {
   onHttpRequest(params);
 });
 hecaton.on('terminal_changed', (params) => {
   onTerminalChanged(params);
 });
-hecaton.on('dialog_result', (params) => {
-  onDialogResult(params.buttonId);
+hecaton.on('dialog_resolved', (params) => {
+  onDialogResult(params.button_id);
 });
-hecaton.on('minimize', () => { rerender(); });
-hecaton.on('restore', () => { rerender(); });
+hecaton.on('window_minimized', () => { rerender(); });
+hecaton.on('restored', () => { rerender(); });
 
 function handleInput(data) {
   const str = data.toString();
@@ -579,7 +579,7 @@ function hasOurHook(matcherArray) {
 
 async function checkAndInjectHooks() {
   try {
-    const homeResult = await hecaton.get_home_dir();
+    const homeResult = await hecaton.env.get_home();
     const home = homeResult.path || homeResult.value || '';
     if (!home) { addLog('Cannot resolve home dir'); return; }
 
@@ -587,7 +587,7 @@ async function checkAndInjectHooks() {
 
     let settings = {};
     try {
-      const readResult = await hecaton.fs_read_file({ path: settingsPath });
+      const readResult = await hecaton.fs.read_file({ path: settingsPath });
       if (readResult && readResult.content) {
         settings = JSON.parse(readResult.content);
       }
@@ -607,7 +607,7 @@ async function checkAndInjectHooks() {
       return;
     }
 
-    await hecaton.show_dialog({
+    await hecaton.dialog.show({
       type: 'message',
       title: 'Install Claude Code Hooks',
       message: `Add hooks to Claude Code settings.json\nto enable agent state detection.\n\nTarget: ${settingsPath}\nEvents: ${HOOK_EVENTS.map(e => e.event).join(', ')}`,
@@ -679,7 +679,7 @@ async function performHookInstall() {
     settings.hooks = hooks;
 
     const content = JSON.stringify(settings, null, 2);
-    await hecaton.fs_write_file({ path: settingsPath, content });
+    await hecaton.fs.write_file({ path: settingsPath, content });
 
     addLog(`Hooks installed to ${settingsPath}`);
     addLog(`${HOOK_EVENTS.length} events registered`);
@@ -696,7 +696,7 @@ async function performHookInstall() {
 // ============================================================
 async function cleanup() {
   for (const t of sm.getAll()) {
-    await hecaton.set_terminal_status({ terminal_id: t.id, label: '', icon: '', color: '', detail: '' });
+    await hecaton.terminal.set_status({ terminal_id: t.id, label: '', icon: '', color: '', detail: '' });
   }
   await stopPatternMatching();
   await stopServer();

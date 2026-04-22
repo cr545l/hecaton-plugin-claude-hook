@@ -4,9 +4,7 @@
   "icon": "radio-tower",
   "version": "1.0.0",
   "entry": "main.js",
-  "runtime": "deno",
   "apiVersion": { "major": 1, "minor": 0 },
-  "shortcut": { "key": "H", "mod": "ctrl+shift" },
   "overlay": {
     "mode": "floating",
     "width": "50%",
