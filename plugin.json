@@ -4,7 +4,7 @@
   "icon": "radio-tower",
   "version": "1.0.0",
   "entry": "main.js",
-  "apiVersion": { "major": 1, "minor": 0 },
+  "apiVersion": "1.0",
   "overlay": {
     "mode": "floating",
     "width": "50%",
