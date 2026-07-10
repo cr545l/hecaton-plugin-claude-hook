@@ -487,10 +487,10 @@ hecaton.on('ws_connected', (params) => {
   connections.set(params.connection_id, params.path);
   addLog(`Client connected: ${params.connection_id}`);
 });
-hecaton.on('message_received', (params) => {
+hecaton.on('ws_message_received', (params) => {
   onWsMessage(params);
 });
-hecaton.on('disconnected', (params) => {
+hecaton.on('ws_disconnected', (params) => {
   connections.delete(params.connection_id);
   addLog(`Client disconnected: ${params.connection_id}`);
 });
@@ -504,7 +504,7 @@ hecaton.on('dialog_resolved', (params) => {
   onDialogResult(params.button_id);
 });
 hecaton.on('window_minimized', () => { rerender(); });
-hecaton.on('restored', () => { rerender(); });
+hecaton.on('window_restored', () => { rerender(); });
 
 function handleInput(data) {
   const str = data.toString();
